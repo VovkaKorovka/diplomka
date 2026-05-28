@@ -1,5 +1,5 @@
 async function login(email, password) {
-  const res = await fetch("https://my-backend-production-7cd2.up.railway.app/auth/login", {
+  const res = await fetch("https://diplomka-production-a099.up.railway.app/auth/login", {
     method: "POST",
     headers: {
       "Content-Type": "application/json"
@@ -16,7 +16,7 @@ async function login(email, password) {
 
   localStorage.setItem("token", data.access_token);
 
-  const meRes = await fetch("https://my-backend-production-7cd2.up.railway.app/users/me", {
+  const meRes = await fetch("https://diplomka-production-a099.up.railway.app/users/me", {
     headers: {
       "Authorization": `Bearer ${data.access_token}`
     }

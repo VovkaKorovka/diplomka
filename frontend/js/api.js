@@ -1,4 +1,4 @@
-const API_URL = "https://my-backend-production-7cd2.up.railway.app";
+const API_URL = "https://diplomka-production-a099.up.railway.app";
 
 async function getArticles() {
   const response = await fetch(`${API_URL}/articles`);

@@ -106,7 +106,7 @@ document.addEventListener("DOMContentLoaded", () => {
       btn.disabled = true;
       btn.innerText = "Sending...";
 
-      const API_URL = "https://my-backend-production-7cd2.up.railway.app";
+      const API_URL = "https://diplomka-production-a099.up.railway.app";
 
       const res = await fetch(`${API_URL}/contact/`, {
         method: "POST",

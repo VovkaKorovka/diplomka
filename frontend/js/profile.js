@@ -1,4 +1,4 @@
-const API = "https://my-backend-production-7cd2.up.railway.app";
+const API = "https://diplomka-production-a099.up.railway.app";
 
 function token() {
   return localStorage.getItem("token");
