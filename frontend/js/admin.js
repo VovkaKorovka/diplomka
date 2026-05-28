@@ -1,4 +1,4 @@
-const API = "https://diplomka-production-a099.up.railway.app";
+const API = "https://diplomka-5mob.onrender.com";
 
 /* =========================
    AUTH

@@ -106,7 +106,7 @@ document.addEventListener("DOMContentLoaded", () => {
       btn.disabled = true;
       btn.innerText = "Sending...";
 
-      const API_URL = "https://diplomka-production-a099.up.railway.app";
+      const API_URL = "https://diplomka-5mob.onrender.com";
 
       const res = await fetch(`${API_URL}/contact/`, {
         method: "POST",

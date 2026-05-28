@@ -1,4 +1,4 @@
-const API_URL = "https://diplomka-production-a099.up.railway.app";
+const API_URL = "https://diplomka-5mob.onrender.com";
 
 async function getArticles() {
   const response = await fetch(`${API_URL}/articles`);
