@@ -12,7 +12,7 @@ app.add_middleware(
     allow_origins=[
         "http://localhost:3000",
         "http://127.0.0.1:5500",
-        "https://my-diplom-front.vercel.app"
+        "https://front-mu-coral-24.vercel.app"
     ],
     allow_credentials=True,
     allow_methods=["*"],
