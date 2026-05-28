@@ -1,0 +1,383 @@
+-- =========================================================
+-- DATABASE: Music of the World
+-- PostgreSQL
+-- =========================================================
+
+-- Створення бази даних
+CREATE DATABASE music_world;
+
+-- =========================================================
+-- ПІСЛЯ СТВОРЕННЯ БД:
+-- Підключись до неї через pgAdmin або psql
+--
+-- \c music_world
+-- =========================================================
+
+
+-- =========================================================
+-- TABLE: roles
+-- =========================================================
+
+CREATE TABLE roles (
+    id SERIAL PRIMARY KEY,
+    name VARCHAR(30) UNIQUE NOT NULL
+);
+
+INSERT INTO roles (name)
+VALUES
+('admin'),
+('moderator'),
+('author'),
+('user');
+
+
+-- =========================================================
+-- TABLE: users
+-- =========================================================
+
+CREATE TABLE users (
+    id SERIAL PRIMARY KEY,
+    username VARCHAR(50) UNIQUE NOT NULL,
+    email VARCHAR(100) UNIQUE NOT NULL,
+    password_hash TEXT NOT NULL,
+
+    role_id INTEGER REFERENCES roles(id),
+
+    avatar_url TEXT,
+    preferred_language VARCHAR(10) DEFAULT 'uk',
+
+    is_active BOOLEAN DEFAULT TRUE,
+
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
+
+
+-- =========================================================
+-- TABLE: countries
+-- =========================================================
+
+CREATE TABLE countries (
+    id SERIAL PRIMARY KEY,
+
+    name VARCHAR(100) NOT NULL,
+    region VARCHAR(100),
+
+    flag_url TEXT,
+
+    description TEXT
+);
+
+
+-- =========================================================
+-- TABLE: music_cultures
+-- =========================================================
+
+CREATE TABLE music_cultures (
+    id SERIAL PRIMARY KEY,
+
+    country_id INTEGER NOT NULL REFERENCES countries(id)
+    ON DELETE CASCADE,
+
+    title VARCHAR(200) NOT NULL,
+
+    short_description TEXT,
+
+    history TEXT,
+
+    traditions TEXT,
+
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
+
+
+-- =========================================================
+-- TABLE: genres
+-- =========================================================
+
+CREATE TABLE genres (
+    id SERIAL PRIMARY KEY,
+
+    name VARCHAR(100) UNIQUE NOT NULL,
+
+    description TEXT
+);
+
+
+-- =========================================================
+-- TABLE: culture_genres
+-- MANY TO MANY
+-- =========================================================
+
+CREATE TABLE culture_genres (
+    culture_id INTEGER REFERENCES music_cultures(id)
+    ON DELETE CASCADE,
+
+    genre_id INTEGER REFERENCES genres(id)
+    ON DELETE CASCADE,
+
+    PRIMARY KEY (culture_id, genre_id)
+);
+
+
+-- =========================================================
+-- TABLE: instruments
+-- =========================================================
+
+CREATE TABLE instruments (
+    id SERIAL PRIMARY KEY,
+
+    name VARCHAR(100) NOT NULL,
+
+    description TEXT,
+
+    image_url TEXT
+);
+
+
+-- =========================================================
+-- TABLE: culture_instruments
+-- MANY TO MANY
+-- =========================================================
+
+CREATE TABLE culture_instruments (
+    culture_id INTEGER REFERENCES music_cultures(id)
+    ON DELETE CASCADE,
+
+    instrument_id INTEGER REFERENCES instruments(id)
+    ON DELETE CASCADE,
+
+    PRIMARY KEY (culture_id, instrument_id)
+);
+
+
+-- =========================================================
+-- TABLE: articles
+-- =========================================================
+
+CREATE TABLE articles (
+    id SERIAL PRIMARY KEY,
+
+    author_id INTEGER REFERENCES users(id)
+    ON DELETE SET NULL,
+
+    culture_id INTEGER REFERENCES music_cultures(id)
+    ON DELETE CASCADE,
+
+    title VARCHAR(255) NOT NULL,
+
+    content TEXT NOT NULL,
+
+    status VARCHAR(20) DEFAULT 'draft',
+
+    views INTEGER DEFAULT 0,
+
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+
+    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
+
+
+-- =========================================================
+-- TABLE: media
+-- =========================================================
+
+CREATE TABLE media (
+    id SERIAL PRIMARY KEY,
+
+    article_id INTEGER REFERENCES articles(id)
+    ON DELETE CASCADE,
+
+    type VARCHAR(20) NOT NULL,
+
+    title VARCHAR(255),
+
+    file_url TEXT NOT NULL,
+
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
+
+
+-- =========================================================
+-- TABLE: comments
+-- =========================================================
+
+CREATE TABLE comments (
+    id SERIAL PRIMARY KEY,
+
+    user_id INTEGER REFERENCES users(id)
+    ON DELETE CASCADE,
+
+    article_id INTEGER REFERENCES articles(id)
+    ON DELETE CASCADE,
+
+    content TEXT NOT NULL,
+
+    is_hidden BOOLEAN DEFAULT FALSE,
+
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
+
+
+-- =========================================================
+-- TABLE: ratings
+-- =========================================================
+
+CREATE TABLE ratings (
+    id SERIAL PRIMARY KEY,
+
+    user_id INTEGER REFERENCES users(id)
+    ON DELETE CASCADE,
+
+    article_id INTEGER REFERENCES articles(id)
+    ON DELETE CASCADE,
+
+    rating INTEGER CHECK (rating >= 1 AND rating <= 5)
+);
+
+
+-- =========================================================
+-- TABLE: favorites
+-- =========================================================
+
+CREATE TABLE favorites (
+    user_id INTEGER REFERENCES users(id)
+    ON DELETE CASCADE,
+
+    article_id INTEGER REFERENCES articles(id)
+    ON DELETE CASCADE,
+
+    PRIMARY KEY (user_id, article_id)
+);
+
+
+-- =========================================================
+-- TABLE: quizzes
+-- =========================================================
+
+CREATE TABLE quizzes (
+    id SERIAL PRIMARY KEY,
+
+    title VARCHAR(255) NOT NULL,
+
+    description TEXT
+);
+
+
+-- =========================================================
+-- TABLE: quiz_questions
+-- =========================================================
+
+CREATE TABLE quiz_questions (
+    id SERIAL PRIMARY KEY,
+
+    quiz_id INTEGER REFERENCES quizzes(id)
+    ON DELETE CASCADE,
+
+    question TEXT NOT NULL,
+
+    correct_answer TEXT NOT NULL
+);
+
+
+-- =========================================================
+-- TABLE: quiz_answers
+-- =========================================================
+
+CREATE TABLE quiz_answers (
+    id SERIAL PRIMARY KEY,
+
+    question_id INTEGER REFERENCES quiz_questions(id)
+    ON DELETE CASCADE,
+
+    answer TEXT NOT NULL,
+
+    is_correct BOOLEAN DEFAULT FALSE
+);
+
+
+-- =========================================================
+-- TABLE: activity_logs
+-- =========================================================
+
+CREATE TABLE activity_logs (
+    id SERIAL PRIMARY KEY,
+
+    user_id INTEGER REFERENCES users(id)
+    ON DELETE SET NULL,
+
+    action TEXT NOT NULL,
+
+    ip_address VARCHAR(50),
+
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
+
+
+-- =========================================================
+-- TABLE: reports
+-- =========================================================
+
+CREATE TABLE reports (
+    id SERIAL PRIMARY KEY,
+
+    user_id INTEGER REFERENCES users(id)
+    ON DELETE SET NULL,
+
+    comment_id INTEGER REFERENCES comments(id)
+    ON DELETE CASCADE,
+
+    reason TEXT,
+
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
+
+
+-- =========================================================
+-- INDEXES
+-- =========================================================
+
+CREATE INDEX idx_articles_title
+ON articles(title);
+
+CREATE INDEX idx_articles_status
+ON articles(status);
+
+CREATE INDEX idx_comments_article_id
+ON comments(article_id);
+
+CREATE INDEX idx_media_article_id
+ON media(article_id);
+
+CREATE INDEX idx_music_cultures_country_id
+ON music_cultures(country_id);
+
+
+-- =========================================================
+-- OPTIONAL TEST DATA
+-- =========================================================
+
+INSERT INTO countries (name, region)
+VALUES
+('Ukraine', 'Europe'),
+('Japan', 'Asia'),
+('Brazil', 'South America');
+
+INSERT INTO genres (name)
+VALUES
+('Folk'),
+('Classical'),
+('Traditional'),
+('Jazz');
+
+INSERT INTO instruments (name)
+VALUES
+('Bandura'),
+('Koto'),
+('Pan Flute');
+
+
+
+-- =========================================================
+-- END
+-- =========================================================
+python run.py 
