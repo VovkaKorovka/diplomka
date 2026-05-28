@@ -1,0 +1,42 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>Register</title>
+
+<link rel="stylesheet" href="css/style.css">
+<link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;600;800&display=swap" rel="stylesheet">
+</head>
+
+<body class="auth-page">
+
+<header class="auth-nav">
+  <a href="index.html">← Back to Home</a>
+  <a href="albums.html">Dashboard</a>
+</header>
+
+<div class="auth-container">
+
+  <div class="auth-card">
+
+    <h2>Create Account</h2>
+    <p class="subtitle">Join Music World community</p>
+
+    <input id="username" placeholder="Username">
+    <input id="email" type="email" placeholder="Email">
+    <input id="password" type="password" placeholder="Password">
+
+    <button onclick="register()">Create Account</button>
+
+    <div class="auth-footer">
+      <span>Already have account?</span>
+      <a href="login.html">Login</a>
+    </div>
+
+  </div>
+
+</div>
+
+<script src="js/auth.js"></script>
+</body>
+</html>

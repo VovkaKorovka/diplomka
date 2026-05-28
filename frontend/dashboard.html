@@ -1,0 +1,62 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>Dashboard</title>
+<link rel="stylesheet" href="css/style.css">
+</head>
+
+<body>
+
+<header class="header">
+  <div class="logo">🎵 Music World</div>
+
+  <nav>
+    <a href="index.html">Home</a>
+    <a href="albums.html">Albums</a>
+  </nav>
+
+  <div>
+    <button onclick="logout()">Logout</button>
+  </div>
+</header>
+
+<section class="dashboard">
+
+  <h1>Dashboard</h1>
+
+  <div class="dashboard-buttons">
+
+    <button onclick="location.href='albums.html'">
+      View Albums
+    </button>
+
+    <button onclick="location.href='profile.html'">
+      My Profile
+    </button>
+
+    <!-- ADMIN ONLY BUTTON -->
+    <button id="adminBtn" onclick="location.href='admin.html'">
+      Admin Panel
+    </button>
+
+  </div>
+
+</section>
+
+<script>
+function logout() {
+  localStorage.clear();
+  location.href = "index.html";
+}
+
+// 🔥 ROLE CHECK
+const role = localStorage.getItem("role");
+
+if (role !== "admin") {
+  document.getElementById("adminBtn").style.display = "none";
+}
+</script>
+
+</body>
+</html>

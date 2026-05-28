@@ -1,0 +1,494 @@
+* {
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+  font-family: "Poppins", sans-serif;
+}
+
+body {
+  background: #0f1115;
+  color: white;
+}
+.grid {
+  width: 90%;
+  margin: 40px auto;
+
+  display: grid;
+
+  grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+
+  gap: 30px;
+}
+
+.card {
+  background: #111;
+
+  border-radius: 20px;
+
+  overflow: hidden;
+
+  cursor: pointer;
+
+  transition: 0.3s;
+}
+
+.card:hover {
+  transform: translateY(-5px);
+}
+
+.avatar-box {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 10px;
+  margin-bottom: 15px;
+}
+.footer {
+  background: #111;
+  color: white;
+  padding: 40px 20px;
+  margin-top: 60px;
+}
+
+.footer-content {
+  display: flex;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 30px;
+}
+
+.footer-section {
+  min-width: 220px;
+  flex: 1;
+}
+
+.footer-section h3,
+.footer-section h4 {
+  margin-bottom: 10px;
+}
+
+.footer-section a {
+  display: block;
+  color: #aaa;
+  text-decoration: none;
+  margin: 5px 0;
+}
+
+.footer-section a:hover {
+  color: white;
+}
+
+.footer-section input,
+.footer-section textarea {
+  width: 100%;
+  margin: 5px 0;
+  padding: 10px;
+  border: none;
+  border-radius: 5px;
+}
+
+.footer-section button {
+  width: 100%;
+  padding: 10px;
+  background: #ff4d4d;
+  color: white;
+  border: none;
+  cursor: pointer;
+  border-radius: 5px;
+}
+
+.footer-bottom {
+  text-align: center;
+  margin-top: 20px;
+  color: #777;
+  font-size: 14px;
+}
+
+.avatar {
+  width: 120px;
+  height: 120px;
+  border-radius: 50%;
+  object-fit: cover;
+  border: 3px solid #fff;
+  box-shadow: 0 4px 12px rgba(0,0,0,0.2);
+}
+
+.card img {
+  width: 100%;
+  height: 220px;
+
+  object-fit: cover;
+}
+
+.card-content {
+  padding: 20px;
+}
+
+.card h3 {
+  margin-bottom: 10px;
+}
+
+.card p {
+  opacity: 0.7;
+  line-height: 1.5;
+}
+
+.views {
+  display: block;
+
+  margin-top: 15px;
+
+  font-size: 14px;
+
+  opacity: 0.6;
+}
+/* ================= HEADER ================= */
+
+.header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 20px 50px;
+  background: rgba(20, 20, 30, 0.6);
+  backdrop-filter: blur(10px);
+  position: sticky;
+  top: 0;
+}
+
+.logo {
+  font-size: 22px;
+  font-weight: 800;
+}
+
+nav a {
+  margin: 0 15px;
+  text-decoration: none;
+  color: #aaa;
+  transition: 0.3s;
+}
+
+nav a:hover {
+  color: white;
+}
+
+.auth-buttons button {
+  margin-left: 10px;
+  padding: 10px 16px;
+  border: none;
+  border-radius: 10px;
+  cursor: pointer;
+}
+
+.auth-buttons button:first-child {
+  background: #2a2a2a;
+  color: white;
+}
+
+.auth-buttons button:last-child {
+  background: #7c3aed;
+  color: white;
+}
+
+/* ================= HERO ================= */
+
+.hero {
+  text-align: center;
+  padding: 120px 20px;
+  background: radial-gradient(circle at top, #6d28d9, transparent 60%);
+}
+
+.hero h1 {
+  font-size: 60px;
+  font-weight: 800;
+}
+
+.hero p {
+  color: #aaa;
+  margin-top: 10px;
+  font-size: 18px;
+}
+
+.main-btn {
+  margin-top: 30px;
+  padding: 14px 28px;
+  border: none;
+  border-radius: 12px;
+  background: #7c3aed;
+  color: white;
+  cursor: pointer;
+  font-size: 16px;
+}
+
+/* ================= PAGE TITLE ================= */
+
+.page-title {
+  text-align: center;
+  padding: 60px 20px 20px;
+}
+
+.page-title h1 {
+  font-size: 42px;
+}
+
+.page-title p {
+  color: #aaa;
+  margin-top: 8px;
+}
+
+/* ================= GRID ================= */
+
+.grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+  gap: 25px;
+  padding: 40px;
+}
+
+/* ================= CARD (UNIFIED VERSION) ================= */
+
+.card {
+  background: #1a1d25;
+  border-radius: 18px;
+  overflow: hidden;
+  cursor: pointer;
+  transition: 0.3s;
+  box-shadow: 0 10px 30px rgba(0,0,0,0.2);
+}
+
+.card:hover {
+  transform: translateY(-10px) scale(1.03);
+  box-shadow: 0 20px 50px rgba(0,0,0,0.4);
+}
+
+/* IMAGE */
+.card img {
+  width: 100%;
+  height: 200px;
+  object-fit: cover;
+  transition: 0.5s;
+}
+
+.card:hover img {
+  transform: scale(1.15);
+}
+
+/* TEXT */
+.card h3 {
+  padding: 10px;
+  font-size: 18px;
+}
+
+.card p {
+  padding: 0 10px 15px;
+  color: #aaa;
+  font-size: 13px;
+}
+
+/* ================= AUTH ================= */
+
+.auth-body {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  height: 100vh;
+  background: #0f1115;
+}
+
+.auth-box {
+  background: #1a1d25;
+  padding: 30px;
+  border-radius: 20px;
+  width: 320px;
+}
+
+.auth-box input {
+  width: 100%;
+  margin: 10px 0;
+  padding: 12px;
+  border: none;
+  border-radius: 10px;
+  background: #111;
+  color: white;
+}
+
+.auth-box button {
+  width: 100%;
+  padding: 12px;
+  background: #7c3aed;
+  border: none;
+  border-radius: 10px;
+  color: white;
+  cursor: pointer;
+  margin-top: 10px;
+}
+
+/* ===== AUTH MODERN UI ===== */
+
+.auth-page {
+  background: radial-gradient(circle at top, #1a1a2e, #0f1115);
+  height: 100vh;
+  font-family: "Poppins", sans-serif;
+}
+
+/* top bar */
+.auth-nav {
+  display: flex;
+  justify-content: space-between;
+  padding: 20px 40px;
+}
+
+.auth-nav a {
+  color: #aaa;
+  text-decoration: none;
+  font-weight: 500;
+  transition: 0.3s;
+}
+
+.auth-nav a:hover {
+  color: white;
+}
+
+/* center container */
+.auth-container {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  height: 80vh;
+}
+
+/* card */
+.auth-card {
+  width: 360px;
+  background: rgba(255,255,255,0.06);
+  backdrop-filter: blur(15px);
+  border: 1px solid rgba(255,255,255,0.1);
+  border-radius: 20px;
+  padding: 30px;
+  color: white;
+  box-shadow: 0 20px 50px rgba(0,0,0,0.4);
+}
+
+.auth-card h2 {
+  font-size: 28px;
+  margin-bottom: 5px;
+}
+
+.subtitle {
+  font-size: 13px;
+  color: #aaa;
+  margin-bottom: 20px;
+}
+
+/* inputs */
+.auth-card input {
+  width: 100%;
+  padding: 12px;
+  margin: 10px 0;
+  border-radius: 12px;
+  border: none;
+  background: rgba(255,255,255,0.08);
+  color: white;
+  outline: none;
+}
+
+/* button */
+.auth-card button {
+  width: 100%;
+  padding: 12px;
+  margin-top: 10px;
+  border: none;
+  border-radius: 12px;
+  background: #7c3aed;
+  color: white;
+  cursor: pointer;
+  transition: 0.3s;
+}
+
+.auth-card button:hover {
+  transform: scale(1.03);
+}
+
+/* bottom text */
+.auth-footer {
+  margin-top: 15px;
+  text-align: center;
+  font-size: 13px;
+  color: #aaa;
+}
+
+.auth-footer a {
+  color: #a78bfa;
+  text-decoration: none;
+}
+
+.auth-footer a:hover {
+  text-decoration: underline;
+}
+
+.card button {
+  margin-top: 10px;
+  padding: 8px 12px;
+  border: none;
+  border-radius: 8px;
+  background: crimson;
+  color: white;
+  cursor: pointer;
+}
+
+.card button:hover {
+  background: darkred;
+}
+
+.header button {
+  padding: 10px 18px;
+  border: none;
+  border-radius: 12px;
+  cursor: pointer;
+
+  background: linear-gradient(135deg, #ef4444, #b91c1c);
+  color: white;
+  font-weight: 600;
+
+  box-shadow: 0 10px 25px rgba(239, 68, 68, 0.25);
+
+  transition: 0.25s ease;
+}
+
+.header button:hover {
+  transform: translateY(-3px) scale(1.05);
+  box-shadow: 0 15px 35px rgba(239, 68, 68, 0.35);
+}
+
+.actions {
+  display: flex;
+  gap: 10px;
+  margin: 20px 0;
+}
+
+.actions button {
+  padding: 10px 15px;
+  border: none;
+  border-radius: 10px;
+  cursor: pointer;
+  background: #7c3aed;
+  color: white;
+}
+
+.comments {
+  margin-top: 30px;
+}
+
+#commentText {
+  width: 100%;
+  height: 80px;
+  margin-top: 10px;
+  padding: 10px;
+  border-radius: 10px;
+}
+
+.comment {
+  background: #1a1d25;
+  padding: 10px;
+  margin-top: 10px;
+  border-radius: 10px;
+}

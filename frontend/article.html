@@ -1,0 +1,116 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>Article</title>
+
+<link rel="stylesheet" href="css/style.css">
+<link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;600;800&display=swap" rel="stylesheet">
+
+<style>
+.rating-box {
+  text-align: center;
+  margin: 15px 0;
+  font-size: 18px;
+  font-weight: 600;
+}
+
+#ratingStats {
+  background: #111;
+  color: #fff;
+  display: inline-block;
+  padding: 10px 20px;
+  border-radius: 12px;
+}
+
+.music-box {
+  max-width: 900px;
+  margin: 20px auto;
+  padding: 15px;
+}
+
+.track {
+  background: #111;
+  color: #fff;
+  padding: 12px;
+  margin: 10px 0;
+  border-radius: 10px;
+
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.track a {
+  color: #00c3ff;
+  text-decoration: none;
+}
+
+.track button {
+  padding: 6px 12px;
+  cursor: pointer;
+}
+</style>
+
+</head>
+
+<body>
+
+<header class="header">
+
+  <div class="logo">🎵 Music World</div>
+
+  <nav>
+    <a href="index.html">Home</a>
+    <a href="albums.html">Albums</a>
+  </nav>
+
+</header>
+
+<section id="articleContainer" class="article-box"></section>
+
+<!-- 🎵 MUSIC -->
+<div id="musicContainer" class="music-box"></div>
+
+<!-- ⭐ RATING -->
+<div class="rating-box">
+  <div id="ratingStats">⭐ Loading rating...</div>
+</div>
+
+<hr>
+
+<div id="restrictedContent">
+
+  <div class="actions">
+    <button onclick="likeArticle()">❤️ Like</button>
+
+    <select id="rating">
+      <option value="1">1</option>
+      <option value="2">2</option>
+      <option value="3">3</option>
+      <option value="4">4</option>
+      <option value="5">5</option>
+    </select>
+
+    <button onclick="rateArticle()">⭐ Rate</button>
+  </div>
+
+  <hr>
+
+  <div class="comments">
+    <h2>Comments</h2>
+
+    <textarea id="commentText" placeholder="Write comment..."></textarea>
+
+    <button onclick="addComment()">Send</button>
+
+    <div id="commentsList"></div>
+  </div>
+
+</div>
+
+<script src="js/app.js"></script>
+<script src="js/article.js"></script>
+
+</body>
+</html>
