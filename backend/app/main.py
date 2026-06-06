@@ -23,6 +23,7 @@ app.add_middleware(
 # ROUTES (SAFE IMPORT)
 # =====================
 
+try:
     from app.routers.auth import router as auth_router
     from app.routers.users import router as users_router
     from app.routers.articles import router as articles_router
@@ -48,6 +49,9 @@ app.add_middleware(
     app.include_router(genres_router)
     app.include_router(instruments_router)
     app.include_router(music_router)
+
+except Exception as e:
+    print("Router import error:", e)
 
 # =====================
 # DB INIT (SAFE)
