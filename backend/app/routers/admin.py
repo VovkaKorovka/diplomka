@@ -26,11 +26,22 @@ def admin_create_article(
     db: Session = Depends(get_db),
     admin=Depends(require_admin)
 ):
+    # 🔥 VALIDATION
+    if not article.title or not article.title.strip():
+        raise HTTPException(status_code=400, detail="Title required")
+
+    if not article.content or not article.content.strip():
+        raise HTTPException(status_code=400, detail="Content required")
+
+    # 🔥 CLEAN DATA
+    title = article.title.strip()
+    content = article.content.strip()
+
     new_article = Article(
-        title=article.title,
-        content=article.content,
+        title=title,
+        content=content,
         author_id=admin.id,
-        culture_id=article.culture_id,  # 🔥 ОБОВʼЯЗКОВО
+        culture_id=article.culture_id,
         is_album=bool(article.is_album),
         status="published"
     )

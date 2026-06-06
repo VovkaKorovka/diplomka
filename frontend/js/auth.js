@@ -8,12 +8,27 @@ function isEmail(email) {
   return /^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$/.test(email);
 }
 
-function isText(str) {
-  return /^[a-zA-Z0-9]+$/.test(str);
+/* username нормальний (без обмеження тільки letters) */
+function isUsername(str) {
+  return /^[a-zA-Z0-9_]{3,20}$/.test(str);
 }
 
 function isPassword(p) {
-  return /^[a-zA-Z0-9]{6,}$/.test(p);
+  return typeof p === "string" && p.length >= 6;
+}
+
+function notEmpty(v) {
+  return v && v.trim().length > 0;
+}
+
+/* ======================
+   HELPERS
+====================== */
+
+function setLoading(btn, state) {
+  if (!btn) return;
+  btn.disabled = state;
+  btn.textContent = state ? "Loading..." : btn.dataset.original || "Submit";
 }
 
 /* ======================
@@ -21,12 +36,19 @@ function isPassword(p) {
 ====================== */
 
 async function login() {
-  try {
-    const email = document.getElementById("email").value.trim();
-    const password = document.getElementById("password").value.trim();
+  const btn = document.querySelector("#loginBtn");
 
-    if (!isEmail(email)) return alert("Invalid email");
-    if (!isPassword(password)) return alert("Invalid password");
+  try {
+    const email = document.getElementById("email")?.value?.trim();
+    const password = document.getElementById("password")?.value?.trim();
+
+    if (!notEmpty(email)) return alert("Email required");
+    if (!notEmpty(password)) return alert("Password required");
+
+    if (!isEmail(email)) return alert("Invalid email format");
+    if (!isPassword(password)) return alert("Password min 6 chars");
+
+    setLoading(btn, true);
 
     const res = await fetch(`${API}/auth/login`, {
       method: "POST",
@@ -40,11 +62,12 @@ async function login() {
       return alert(data.detail || "Login failed");
     }
 
-    localStorage.setItem("token", data.access_token);
+    const token = data.access_token;
+    localStorage.setItem("token", token);
 
     const meRes = await fetch(`${API}/users/me`, {
       headers: {
-        Authorization: `Bearer ${data.access_token}`
+        Authorization: `Bearer ${token}`
       }
     });
 
@@ -55,10 +78,10 @@ async function login() {
       return alert("Failed to load user");
     }
 
-    // 🔥 BAN CHECK (CLIENT SIDE)
+    /* ⚠️ STILL CLIENT CHECK (server must also enforce this) */
     if (me.is_active === false) {
       localStorage.clear();
-      return alert("You are banned from system");
+      return alert("Account banned");
     }
 
     localStorage.setItem("role", me.role || "user");
@@ -68,6 +91,8 @@ async function login() {
   } catch (err) {
     console.error(err);
     alert("Server error");
+  } finally {
+    setLoading(btn, false);
   }
 }
 
@@ -76,15 +101,25 @@ async function login() {
 ====================== */
 
 async function register() {
-  try {
-    const username = document.getElementById("username").value.trim();
-    const email = document.getElementById("email").value.trim();
-    const password = document.getElementById("password").value.trim();
+  const btn = document.querySelector("#registerBtn");
 
-    if (username.length < 3) return alert("Username too short");
-    if (!isText(username)) return alert("Only English letters/numbers");
+  try {
+    const username = document.getElementById("username")?.value?.trim();
+    const email = document.getElementById("email")?.value?.trim();
+    const password = document.getElementById("password")?.value?.trim();
+
+    if (!notEmpty(username)) return alert("Username required");
+    if (!notEmpty(email)) return alert("Email required");
+    if (!notEmpty(password)) return alert("Password required");
+
+    if (!isUsername(username)) {
+      return alert("Username 3–20 chars (letters, numbers, _)");
+    }
+
     if (!isEmail(email)) return alert("Invalid email");
     if (!isPassword(password)) return alert("Password min 6 chars");
+
+    setLoading(btn, true);
 
     const res = await fetch(`${API}/auth/register`, {
       method: "POST",
@@ -98,7 +133,9 @@ async function register() {
       return alert(data.detail || "Register failed");
     }
 
-    localStorage.setItem("token", data.access_token);
+    const token = data.access_token;
+
+    localStorage.setItem("token", token);
     localStorage.setItem("role", data.role || "user");
 
     alert("Account created!");
@@ -108,5 +145,7 @@ async function register() {
   } catch (err) {
     console.error(err);
     alert("Server error");
+  } finally {
+    setLoading(btn, false);
   }
 }

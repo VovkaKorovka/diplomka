@@ -11,6 +11,15 @@ router = APIRouter(prefix="/comments", tags=["Comments"])
 
 
 # =========================
+# SAFE HELPERS
+# =========================
+def clean_text(v: str):
+    if v is None:
+        return ""
+    return v.strip()
+
+
+# =========================
 # GET comments for article
 # =========================
 @router.get("/{article_id}")
@@ -21,14 +30,17 @@ def get_comments(article_id: int, db: Session = Depends(get_db)):
     if not article:
         raise HTTPException(status_code=404, detail="Article not found")
 
-    comments = db.query(Comment).filter(
-        Comment.article_id == article_id
-    ).order_by(Comment.id.desc()).all()
+    comments = (
+        db.query(Comment)
+        .filter(Comment.article_id == article_id)
+        .order_by(Comment.id.desc())
+        .all()
+    )
 
     return [
         {
             "id": c.id,
-            "content": c.content,
+            "content": c.content or "",
             "article_id": c.article_id,
             "user_id": c.user_id
         }
@@ -46,6 +58,15 @@ def create_comment(
     user=Depends(get_current_user)
 ):
 
+    content = clean_text(comment.content)
+
+    # 🔥 VALIDATION
+    if not content:
+        raise HTTPException(status_code=400, detail="Comment cannot be empty")
+
+    if len(content) < 2:
+        raise HTTPException(status_code=400, detail="Comment too short")
+
     article = db.query(Article).filter(
         Article.id == comment.article_id
     ).first()
@@ -54,7 +75,7 @@ def create_comment(
         raise HTTPException(status_code=404, detail="Article not found")
 
     new_comment = Comment(
-        content=comment.content,
+        content=content,
         article_id=comment.article_id,
         user_id=user.id
     )
@@ -86,8 +107,7 @@ def delete_comment(
     if not comment:
         raise HTTPException(status_code=404, detail="Comment not found")
 
-    # FIX 🔥
-    user_role = getattr(user.role, "name", None)
+    user_role = getattr(getattr(user, "role", None), "name", None)
 
     if user_role != "admin" and comment.user_id != user.id:
         raise HTTPException(status_code=403, detail="No permission")
@@ -95,4 +115,7 @@ def delete_comment(
     db.delete(comment)
     db.commit()
 
-    return {"message": "deleted", "id": comment_id}
+    return {
+        "message": "deleted",
+        "id": comment_id
+    }

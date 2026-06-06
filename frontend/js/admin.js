@@ -210,31 +210,39 @@ async function loadArticles() {
 async function createArticle() {
   if (!confirm("Створити статтю?")) return;
 
-  const title = document.getElementById("title").value.trim();
-  const content = document.getElementById("content").value.trim();
+  const title = document.getElementById("title").value;
+  const content = document.getElementById("content").value;
 
   const authorVal = document.getElementById("author_id").value;
   const cultureVal = document.getElementById("culture_id").value;
 
+  if (isEmpty(title)) return showError("Title is required");
+  if (!minLen(title, 3)) return showError("Title min 3 symbols");
+
+  if (isEmpty(content)) return showError("Content is required");
+  if (!minLen(content, 10)) return showError("Content min 10 symbols");
+
   const author_id = authorVal ? Number(authorVal) : null;
   const culture_id = cultureVal ? Number(cultureVal) : null;
+
+  if (!author_id) return showError("Select author");
+  if (!culture_id) return showError("Select culture");
 
   const res = await api("/admin/articles", {
     method: "POST",
     body: JSON.stringify({
-      title,
-      content,
+      title: title.trim(),
+      content: content.trim(),
       author_id,
       culture_id,
-      is_album: true   // 🔥 FIX HERE
+      is_album: true
     })
   });
 
   const data = await res?.json().catch(() => ({}));
 
   if (!res || !res.ok) {
-    alert(data.detail || "Create failed");
-    return;
+    return showError(data.detail || "Create failed");
   }
 
   loadArticles();
@@ -357,6 +365,8 @@ async function loadContact() {
 }
 
 async function deleteContact(id) {
+  if (!id) return;
+
   if (!confirm("Delete message?")) return;
 
   await api(`/contact/${id}`, {
@@ -364,6 +374,12 @@ async function deleteContact(id) {
   });
 
   loadContact();
+}
+
+function safeString(v, min = 0, field = "Field") {
+  if (isEmpty(v)) return showError(field + " is required");
+  if (!minLen(v, min)) return showError(field + ` min ${min} symbols`);
+  return true;
 }
 
 /* =========================
@@ -493,9 +509,17 @@ async function createCulture() {
   const name = document.getElementById("cultureName").value;
   const country_id = Number(document.getElementById("country_id").value);
 
+  if (isEmpty(name)) return showError("Culture name required");
+  if (!minLen(name, 2)) return showError("Min 2 symbols");
+
+  if (!country_id) return showError("Select country");
+
   await api("/cultures/", {
     method: "POST",
-    body: JSON.stringify({ name, country_id })
+    body: JSON.stringify({
+      name: name.trim(),
+      country_id
+    })
   });
 
   cache.cultures = null;
@@ -534,9 +558,12 @@ async function createGenre() {
 
   const name = document.getElementById("genreName").value;
 
+  if (isEmpty(name)) return showError("Genre name required");
+  if (!minLen(name, 2)) return showError("Min 2 symbols");
+
   await api("/genres/", {
     method: "POST",
-    body: JSON.stringify({ name })
+    body: JSON.stringify({ name: name.trim() })
   });
 
   loadGenres();
@@ -574,9 +601,12 @@ async function createInstrument() {
 
   const name = document.getElementById("instrumentName").value;
 
+  if (isEmpty(name)) return showError("Instrument name required");
+  if (!minLen(name, 2)) return showError("Min 2 symbols");
+
   await api("/instruments/", {
     method: "POST",
-    body: JSON.stringify({ name })
+    body: JSON.stringify({ name: name.trim() })
   });
 
   loadInstruments();
@@ -664,15 +694,29 @@ function selectAlbum(id) {
 }
 
 async function addMusic() {
-  if (!selectedAlbumId) return alert("Select album");
+  if (!selectedAlbumId) return showError("Select album");
 
   const title = document.getElementById("musicTitle").value;
   const youtube_url = document.getElementById("musicUrl").value;
   const position = Number(document.getElementById("musicPos").value);
 
+  if (isEmpty(title)) return showError("Title required");
+  if (!minLen(title, 2)) return showError("Title min 2 symbols");
+
+  if (isEmpty(youtube_url)) return showError("YouTube URL required");
+  if (!youtube_url.includes("http")) return showError("Invalid URL");
+
+  if (isNaN(position) || position < 0) {
+    return showError("Position must be 0 or higher");
+  }
+
   await api(`/music/${selectedAlbumId}`, {
     method: "POST",
-    body: JSON.stringify({ title, youtube_url, position })
+    body: JSON.stringify({
+      title: title.trim(),
+      youtube_url: youtube_url.trim(),
+      position
+    })
   });
 
   loadMusicPanel();
@@ -691,3 +735,16 @@ async function deleteMusic(id) {
 ========================= */
 
 loadDashboard();
+
+function isEmpty(v) {
+  return v === null || v === undefined || String(v).trim().length === 0;
+}
+
+function minLen(v, len) {
+  return String(v).trim().length >= len;
+}
+
+function showError(msg) {
+  alert(msg);
+  return false;
+}

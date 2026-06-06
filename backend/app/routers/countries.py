@@ -4,8 +4,18 @@ from sqlalchemy.orm import Session
 from app.core.database import get_db
 from app.core.deps import get_current_user
 from app.models.country import Country
-from app.schemas.country import CountryCreate, CountryUpdate, CountryResponse
+from app.schemas.country import CountryCreate, CountryResponse
+
 router = APIRouter(prefix="/countries", tags=["Countries"])
+
+
+# =========================
+# SAFE HELPERS
+# =========================
+def clean(v: str):
+    if v is None:
+        return ""
+    return v.strip()
 
 
 # =========================
@@ -13,7 +23,16 @@ router = APIRouter(prefix="/countries", tags=["Countries"])
 # =========================
 @router.get("/")
 def get_countries(db: Session = Depends(get_db)):
-    return db.query(Country).all()
+
+    countries = db.query(Country).all()
+
+    return [
+        {
+            "id": c.id,
+            "name": c.name or ""
+        }
+        for c in countries
+    ]
 
 
 # =========================
@@ -21,12 +40,16 @@ def get_countries(db: Session = Depends(get_db)):
 # =========================
 @router.get("/{country_id}")
 def get_country(country_id: int, db: Session = Depends(get_db)):
+
     country = db.query(Country).filter(Country.id == country_id).first()
 
     if not country:
         raise HTTPException(status_code=404, detail="Country not found")
 
-    return country
+    return {
+        "id": country.id,
+        "name": country.name or ""
+    }
 
 
 # =========================
@@ -38,12 +61,27 @@ def create_country(
     db: Session = Depends(get_db),
     user=Depends(get_current_user)
 ):
-    role_name = getattr(user.role, "name", None)
+
+    role_name = getattr(getattr(user, "role", None), "name", None)
 
     if role_name != "admin":
         raise HTTPException(status_code=403, detail="Only admin can create country")
 
-    country = Country(**data.model_dump())
+    name = clean(data.name)
+
+    # 🔥 VALIDATION
+    if not name:
+        raise HTTPException(status_code=400, detail="Country name required")
+
+    if len(name) < 2:
+        raise HTTPException(status_code=400, detail="Country name too short")
+
+    # 🔥 duplicate check
+    exists = db.query(Country).filter(Country.name == name).first()
+    if exists:
+        raise HTTPException(status_code=400, detail="Country already exists")
+
+    country = Country(name=name)
 
     db.add(country)
     db.commit()
@@ -61,7 +99,10 @@ def delete_country(
     db: Session = Depends(get_db),
     user=Depends(get_current_user)
 ):
-    if user.role.name != "admin":
+
+    role_name = getattr(getattr(user, "role", None), "name", None)
+
+    if role_name != "admin":
         raise HTTPException(status_code=403, detail="Forbidden")
 
     country = db.query(Country).filter(Country.id == country_id).first()
@@ -72,4 +113,7 @@ def delete_country(
     db.delete(country)
     db.commit()
 
-    return {"message": "Country deleted"}
+    return {
+        "message": "Country deleted",
+        "id": country_id
+    }

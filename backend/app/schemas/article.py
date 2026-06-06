@@ -7,8 +7,9 @@ from datetime import datetime
 # CREATE
 # =========================
 class ArticleCreate(BaseModel):
-    title: str
-    content: str
+    title: str = Field(min_length=3, max_length=200)
+    content: str = Field(min_length=10)
+
     culture_id: Optional[int] = None
     is_album: Optional[bool] = False
 

@@ -10,11 +10,33 @@ router = APIRouter(prefix="/genres", tags=["Genres"])
 
 
 # =========================
+# SAFE HELPERS
+# =========================
+def clean(v: str):
+    if v is None:
+        return ""
+    return v.strip()
+
+
+def get_role(user):
+    return getattr(getattr(user, "role", None), "name", None)
+
+
+# =========================
 # GET ALL GENRES
 # =========================
 @router.get("/")
 def get_genres(db: Session = Depends(get_db)):
-    return db.query(Genre).all()
+
+    genres = db.query(Genre).all()
+
+    return [
+        {
+            "id": g.id,
+            "name": g.name or ""
+        }
+        for g in genres
+    ]
 
 
 # =========================
@@ -26,16 +48,36 @@ def create_genre(
     db: Session = Depends(get_db),
     user=Depends(get_current_user)
 ):
-    if user.role.name != "admin":
+
+    role = get_role(user)
+
+    if role != "admin":
         raise HTTPException(status_code=403, detail="Forbidden")
 
-    genre = Genre(**data.model_dump())
+    name = clean(data.name)
+
+    # 🔥 VALIDATION
+    if not name:
+        raise HTTPException(status_code=400, detail="Genre name required")
+
+    if len(name) < 2:
+        raise HTTPException(status_code=400, detail="Genre name too short")
+
+    # 🔥 duplicate check
+    exists = db.query(Genre).filter(Genre.name == name).first()
+    if exists:
+        raise HTTPException(status_code=400, detail="Genre already exists")
+
+    genre = Genre(name=name)
 
     db.add(genre)
     db.commit()
     db.refresh(genre)
 
-    return genre
+    return {
+        "id": genre.id,
+        "name": genre.name
+    }
 
 
 # =========================
@@ -46,12 +88,19 @@ def get_cultures_by_genre(
     genre_id: int,
     db: Session = Depends(get_db)
 ):
-    genre = db.query(Genre).filter(
-        Genre.id == genre_id
-    ).first()
+
+    genre = db.query(Genre).filter(Genre.id == genre_id).first()
 
     if not genre:
         raise HTTPException(status_code=404, detail="Genre not found")
 
-    # 🔥 safe access (щоб не падало якщо relationship кривий)
-    return getattr(genre, "cultures", [])
+    cultures = getattr(genre, "cultures", [])
+
+    return [
+        {
+            "id": c.id,
+            "name": getattr(c, "title", "") or "",
+            "country_id": getattr(c, "country_id", None)
+        }
+        for c in cultures
+    ]

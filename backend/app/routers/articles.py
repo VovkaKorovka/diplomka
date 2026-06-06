@@ -8,9 +8,8 @@ from app.models.music_culture import MusicCulture
 from app.models.music import Music
 from app.models.rating import Rating
 
-from app.schemas.article import ArticleCreate, ArticleOut
+from app.schemas.article import ArticleCreate, ArticleUpdate, ArticleOut
 from app.core.deps import get_current_user, require_admin
-
 
 router = APIRouter(prefix="/articles", tags=["Articles"])
 
@@ -102,7 +101,7 @@ def get_article(article_id: int, db: Session = Depends(get_db)):
 
 
 # =========================
-# 🎵 GET MUSIC (ALBUM TRACKS)
+# 🎵 GET MUSIC
 # =========================
 @router.get("/{article_id}/music")
 def get_article_music(article_id: int, db: Session = Depends(get_db)):
@@ -110,7 +109,7 @@ def get_article_music(article_id: int, db: Session = Depends(get_db)):
     article = db.query(Article).filter(Article.id == article_id).first()
 
     if not article:
-        raise HTTPException(status_code=404, detail="Article not found")
+        raise HTTPException(status_code=404)
 
     return (
         db.query(Music)
@@ -121,7 +120,7 @@ def get_article_music(article_id: int, db: Session = Depends(get_db)):
 
 
 # =========================
-# ➕ ADD MUSIC TO ALBUM
+# ➕ ADD MUSIC
 # =========================
 @router.post("/{article_id}/music")
 def add_music_to_article(
@@ -139,10 +138,16 @@ def add_music_to_article(
     if not article.is_album:
         raise HTTPException(status_code=400, detail="Not an album")
 
+    title = data.get("title", "").strip()
+    youtube_url = data.get("youtube_url", "").strip()
+
+    if not title or not youtube_url:
+        raise HTTPException(status_code=400, detail="Empty fields")
+
     music = Music(
         article_id=article_id,
-        title=data["title"],
-        youtube_url=data["youtube_url"],
+        title=title,
+        youtube_url=youtube_url,
         position=data.get("position", 0)
     )
 
@@ -183,9 +188,19 @@ def create_article(
     db: Session = Depends(get_db),
     user=Depends(get_current_user)
 ):
+
+    title = article.title.strip()
+    content = article.content.strip()
+
+    if not title or len(title) < 3:
+        raise HTTPException(status_code=400, detail="Title too short")
+
+    if not content or len(content) < 10:
+        raise HTTPException(status_code=400, detail="Content too short")
+
     new_article = Article(
-        title=article.title,
-        content=article.content,
+        title=title,
+        content=content,
         author_id=user.id,
         culture_id=article.culture_id,
         is_album=bool(article.is_album),
@@ -198,16 +213,18 @@ def create_article(
 
     return new_article
 
+
 # =========================
-# ✏️ UPDATE
+# ✏️ UPDATE ARTICLE
 # =========================
 @router.put("/{article_id}", response_model=ArticleOut)
 def update_article(
     article_id: int,
-    article_data: ArticleCreate,
+    article_data: ArticleUpdate,
     db: Session = Depends(get_db),
     user=Depends(get_current_user)
 ):
+
     article = db.query(Article).filter(Article.id == article_id).first()
 
     if not article:
@@ -216,8 +233,26 @@ def update_article(
     if article.author_id != user.id and user.role.name != "admin":
         raise HTTPException(status_code=403)
 
-    article.title = article_data.title
-    article.content = article_data.content
+    if article_data.title is not None:
+        title = article_data.title.strip()
+        if not title:
+            raise HTTPException(status_code=400, detail="Title cannot be empty")
+        article.title = title
+
+    if article_data.content is not None:
+        content = article_data.content.strip()
+        if not content:
+            raise HTTPException(status_code=400, detail="Content cannot be empty")
+        article.content = content
+
+    if article_data.culture_id is not None:
+        article.culture_id = article_data.culture_id
+
+    if article_data.is_album is not None:
+        article.is_album = article_data.is_album
+
+    if article_data.status is not None:
+        article.status = article_data.status
 
     db.commit()
     db.refresh(article)
@@ -226,7 +261,7 @@ def update_article(
 
 
 # =========================
-# 🗑 DELETE
+# 🗑 DELETE ARTICLE
 # =========================
 @router.delete("/{article_id}")
 def delete_article(
@@ -234,6 +269,7 @@ def delete_article(
     db: Session = Depends(get_db),
     admin=Depends(require_admin)
 ):
+
     article = db.query(Article).filter(Article.id == article_id).first()
 
     if not article:
@@ -250,6 +286,7 @@ def delete_article(
 # =========================
 @router.patch("/{article_id}/publish")
 def publish(article_id: int, db: Session = Depends(get_db), admin=Depends(require_admin)):
+
     article = db.query(Article).filter(Article.id == article_id).first()
 
     if not article:
@@ -266,6 +303,7 @@ def publish(article_id: int, db: Session = Depends(get_db), admin=Depends(requir
 # =========================
 @router.patch("/{article_id}/draft")
 def draft(article_id: int, db: Session = Depends(get_db), admin=Depends(require_admin)):
+
     article = db.query(Article).filter(Article.id == article_id).first()
 
     if not article:

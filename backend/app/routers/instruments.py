@@ -10,11 +10,33 @@ router = APIRouter(prefix="/instruments", tags=["Instruments"])
 
 
 # =========================
+# SAFE HELPERS
+# =========================
+def clean(v: str):
+    if v is None:
+        return ""
+    return v.strip()
+
+
+def get_role(user):
+    return getattr(getattr(user, "role", None), "name", None)
+
+
+# =========================
 # GET ALL INSTRUMENTS
 # =========================
 @router.get("/")
 def get_instruments(db: Session = Depends(get_db)):
-    return db.query(Instrument).all()
+
+    instruments = db.query(Instrument).all()
+
+    return [
+        {
+            "id": i.id,
+            "name": i.name or ""
+        }
+        for i in instruments
+    ]
 
 
 # =========================
@@ -22,14 +44,20 @@ def get_instruments(db: Session = Depends(get_db)):
 # =========================
 @router.get("/{instrument_id}")
 def get_instrument(instrument_id: int, db: Session = Depends(get_db)):
-    instrument = db.query(Instrument).filter(
-        Instrument.id == instrument_id
-    ).first()
+
+    instrument = (
+        db.query(Instrument)
+        .filter(Instrument.id == instrument_id)
+        .first()
+    )
 
     if not instrument:
         raise HTTPException(status_code=404, detail="Instrument not found")
 
-    return instrument
+    return {
+        "id": instrument.id,
+        "name": instrument.name or ""
+    }
 
 
 # =========================
@@ -41,13 +69,33 @@ def create_instrument(
     db: Session = Depends(get_db),
     user=Depends(get_current_user)
 ):
-    if user.role.name != "admin":
+
+    role = get_role(user)
+
+    if role != "admin":
         raise HTTPException(status_code=403, detail="Forbidden")
 
-    instrument = Instrument(**data.model_dump())
+    name = clean(data.name)
+
+    # 🔥 VALIDATION
+    if not name:
+        raise HTTPException(status_code=400, detail="Instrument name required")
+
+    if len(name) < 2:
+        raise HTTPException(status_code=400, detail="Instrument name too short")
+
+    # 🔥 duplicate check
+    exists = db.query(Instrument).filter(Instrument.name == name).first()
+    if exists:
+        raise HTTPException(status_code=400, detail="Instrument already exists")
+
+    instrument = Instrument(name=name)
 
     db.add(instrument)
     db.commit()
     db.refresh(instrument)
 
-    return instrument
+    return {
+        "id": instrument.id,
+        "name": instrument.name
+    }

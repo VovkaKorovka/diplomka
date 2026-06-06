@@ -13,20 +13,34 @@ router = APIRouter(prefix="/cultures", tags=["Music Cultures"])
 
 
 # =========================
+# SAFE HELPERS
+# =========================
+def clean(v: str):
+    if v is None:
+        return ""
+    return v.strip()
+
+
+def get_role(user):
+    return getattr(getattr(user, "role", None), "name", None)
+
+
+# =========================
 # GET ALL CULTURES
 # =========================
 @router.get("/")
 def get_cultures(db: Session = Depends(get_db)):
+
     cultures = db.query(MusicCulture).all()
 
     return [
         {
             "id": c.id,
-            "name": c.title,   # 🔥 FIX: фронт очікує name
+            "name": c.title or "",
             "country_id": c.country_id,
-            "short_description": c.short_description,
-            "history": c.history,
-            "traditions": c.traditions
+            "short_description": c.short_description or "",
+            "history": c.history or "",
+            "traditions": c.traditions or ""
         }
         for c in cultures
     ]
@@ -37,6 +51,7 @@ def get_cultures(db: Session = Depends(get_db)):
 # =========================
 @router.get("/{culture_id}")
 def get_culture(culture_id: int, db: Session = Depends(get_db)):
+
     c = db.query(MusicCulture).filter(MusicCulture.id == culture_id).first()
 
     if not c:
@@ -44,11 +59,11 @@ def get_culture(culture_id: int, db: Session = Depends(get_db)):
 
     return {
         "id": c.id,
-        "name": c.title,
+        "name": c.title or "",
         "country_id": c.country_id,
-        "short_description": c.short_description,
-        "history": c.history,
-        "traditions": c.traditions
+        "short_description": c.short_description or "",
+        "history": c.history or "",
+        "traditions": c.traditions or ""
     }
 
 
@@ -62,15 +77,32 @@ def create_culture(
     user=Depends(get_current_user)
 ):
 
-    if user.role.name not in ["admin", "author"]:
-        raise HTTPException(status_code=403)
+    role = get_role(user)
+
+    if role not in ["admin", "author"]:
+        raise HTTPException(status_code=403, detail="Forbidden")
+
+    name = clean(data.name)
+
+    # 🔥 VALIDATION
+    if not name:
+        raise HTTPException(status_code=400, detail="Culture name required")
+
+    if len(name) < 2:
+        raise HTTPException(status_code=400, detail="Culture name too short")
 
     country = db.query(Country).filter(Country.id == data.country_id).first()
+
     if not country:
         raise HTTPException(status_code=404, detail="Country not found")
 
+    # 🔥 duplicate check
+    exists = db.query(MusicCulture).filter(MusicCulture.title == name).first()
+    if exists:
+        raise HTTPException(status_code=400, detail="Culture already exists")
+
     culture = MusicCulture(
-        title=data.name,   # 🔥 FIX HERE
+        title=name,
         country_id=data.country_id
     )
 
@@ -95,7 +127,10 @@ def update_culture(
     db: Session = Depends(get_db),
     user=Depends(get_current_user)
 ):
-    if user.role.name not in ["admin", "author"]:
+
+    role = get_role(user)
+
+    if role not in ["admin", "author"]:
         raise HTTPException(status_code=403, detail="Forbidden")
 
     c = db.query(MusicCulture).filter(MusicCulture.id == culture_id).first()
@@ -103,7 +138,13 @@ def update_culture(
     if not c:
         raise HTTPException(status_code=404, detail="Culture not found")
 
-    for key, value in data.model_dump(exclude_unset=True).items():
+    update_data = data.model_dump(exclude_unset=True)
+
+    # 🔥 clean name if exists
+    if "name" in update_data:
+        update_data["title"] = clean(update_data.pop("name"))
+
+    for key, value in update_data.items():
         setattr(c, key, value)
 
     db.commit()
@@ -111,11 +152,11 @@ def update_culture(
 
     return {
         "id": c.id,
-        "name": c.title,
+        "name": c.title or "",
         "country_id": c.country_id,
-        "short_description": c.short_description,
-        "history": c.history,
-        "traditions": c.traditions
+        "short_description": c.short_description or "",
+        "history": c.history or "",
+        "traditions": c.traditions or ""
     }
 
 
@@ -128,7 +169,10 @@ def delete_culture(
     db: Session = Depends(get_db),
     user=Depends(get_current_user)
 ):
-    if user.role.name != "admin":
+
+    role = get_role(user)
+
+    if role != "admin":
         raise HTTPException(status_code=403, detail="Forbidden")
 
     c = db.query(MusicCulture).filter(MusicCulture.id == culture_id).first()
@@ -139,4 +183,7 @@ def delete_culture(
     db.delete(c)
     db.commit()
 
-    return {"message": "Culture deleted"}
+    return {
+        "message": "Culture deleted",
+        "id": culture_id
+    }
