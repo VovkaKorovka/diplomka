@@ -15,6 +15,71 @@ router = APIRouter(prefix="/articles", tags=["Articles"])
 
 
 # =========================
+# 🔥 ERROR HANDLER
+# =========================
+def error(status: int, message: str, field: str | None = None):
+    raise HTTPException(
+        status_code=status,
+        detail={
+            "message": message,
+            "field": field
+        }
+    )
+
+
+# =========================
+# 🧼 CLEANER
+# =========================
+def clean(value: str | None) -> str:
+    return value.strip() if isinstance(value, str) else ""
+
+
+# =========================
+# 🧪 VALIDATORS
+# =========================
+def validate_title(title: str):
+    title = clean(title)
+
+    if not title:
+        error(400, "Title is required", "title")
+
+    if len(title) < 3:
+        error(400, "Title must be at least 3 characters", "title")
+
+    if len(title) > 200:
+        error(400, "Title is too long (max 200 chars)", "title")
+
+    return title
+
+
+def validate_content(content: str):
+    content = clean(content)
+
+    if not content:
+        error(400, "Content is required", "content")
+
+    if len(content) < 10:
+        error(400, "Content must be at least 10 characters", "content")
+
+    if len(content) > 50000:
+        error(400, "Content is too long", "content")
+
+    return content
+
+
+def validate_url(url: str):
+    url = clean(url)
+
+    if not url:
+        error(400, "YouTube URL is required", "youtube_url")
+
+    if "http" not in url:
+        error(400, "Invalid URL format", "youtube_url")
+
+    return url
+
+
+# =========================
 # 🌍 ALL ARTICLES
 # =========================
 @router.get("/", response_model=list[ArticleOut])
@@ -37,6 +102,11 @@ def get_articles(
 # =========================
 @router.get("/search", response_model=list[ArticleOut])
 def search_articles(q: str, db: Session = Depends(get_db)):
+
+    q = clean(q)
+    if not q:
+        error(400, "Search query is required", "q")
+
     return (
         db.query(Article)
         .filter(Article.title.ilike(f"%{q}%"))
@@ -76,6 +146,7 @@ def popular_articles(db: Session = Depends(get_db)):
 # =========================
 @router.get("/by-country/{country_id}", response_model=list[ArticleOut])
 def by_country(country_id: int, db: Session = Depends(get_db)):
+
     return (
         db.query(Article)
         .join(MusicCulture, Article.culture_id == MusicCulture.id)
@@ -89,10 +160,11 @@ def by_country(country_id: int, db: Session = Depends(get_db)):
 # =========================
 @router.get("/{article_id}", response_model=ArticleOut)
 def get_article(article_id: int, db: Session = Depends(get_db)):
+
     article = db.query(Article).filter(Article.id == article_id).first()
 
     if not article:
-        raise HTTPException(status_code=404, detail="Article not found")
+        error(404, "Article not found")
 
     article.views += 1
     db.commit()
@@ -109,7 +181,7 @@ def get_article_music(article_id: int, db: Session = Depends(get_db)):
     article = db.query(Article).filter(Article.id == article_id).first()
 
     if not article:
-        raise HTTPException(status_code=404)
+        error(404, "Article not found")
 
     return (
         db.query(Music)
@@ -133,16 +205,13 @@ def add_music_to_article(
     article = db.query(Article).filter(Article.id == article_id).first()
 
     if not article:
-        raise HTTPException(status_code=404)
+        error(404, "Article not found")
 
     if not article.is_album:
-        raise HTTPException(status_code=400, detail="Not an album")
+        error(400, "This article is not an album")
 
-    title = data.get("title", "").strip()
-    youtube_url = data.get("youtube_url", "").strip()
-
-    if not title or not youtube_url:
-        raise HTTPException(status_code=400, detail="Empty fields")
+    title = validate_title(data.get("title"))
+    youtube_url = validate_url(data.get("youtube_url"))
 
     music = Music(
         article_id=article_id,
@@ -171,7 +240,7 @@ def delete_music(
     music = db.query(Music).filter(Music.id == music_id).first()
 
     if not music:
-        raise HTTPException(status_code=404)
+        error(404, "Music not found")
 
     db.delete(music)
     db.commit()
@@ -189,14 +258,8 @@ def create_article(
     user=Depends(get_current_user)
 ):
 
-    title = article.title.strip()
-    content = article.content.strip()
-
-    if not title or len(title) < 3:
-        raise HTTPException(status_code=400, detail="Title too short")
-
-    if not content or len(content) < 10:
-        raise HTTPException(status_code=400, detail="Content too short")
+    title = validate_title(article.title)
+    content = validate_content(article.content)
 
     new_article = Article(
         title=title,
@@ -228,22 +291,16 @@ def update_article(
     article = db.query(Article).filter(Article.id == article_id).first()
 
     if not article:
-        raise HTTPException(status_code=404)
+        error(404, "Article not found")
 
     if article.author_id != user.id and user.role.name != "admin":
-        raise HTTPException(status_code=403)
+        error(403, "Not allowed to edit this article")
 
     if article_data.title is not None:
-        title = article_data.title.strip()
-        if not title:
-            raise HTTPException(status_code=400, detail="Title cannot be empty")
-        article.title = title
+        article.title = validate_title(article_data.title)
 
     if article_data.content is not None:
-        content = article_data.content.strip()
-        if not content:
-            raise HTTPException(status_code=400, detail="Content cannot be empty")
-        article.content = content
+        article.content = validate_content(article_data.content)
 
     if article_data.culture_id is not None:
         article.culture_id = article_data.culture_id
@@ -273,7 +330,7 @@ def delete_article(
     article = db.query(Article).filter(Article.id == article_id).first()
 
     if not article:
-        raise HTTPException(status_code=404)
+        error(404, "Article not found")
 
     db.delete(article)
     db.commit()
@@ -290,7 +347,7 @@ def publish(article_id: int, db: Session = Depends(get_db), admin=Depends(requir
     article = db.query(Article).filter(Article.id == article_id).first()
 
     if not article:
-        raise HTTPException(status_code=404)
+        error(404, "Article not found")
 
     article.status = "published"
     db.commit()
@@ -307,7 +364,7 @@ def draft(article_id: int, db: Session = Depends(get_db), admin=Depends(require_
     article = db.query(Article).filter(Article.id == article_id).first()
 
     if not article:
-        raise HTTPException(status_code=404)
+        error(404, "Article not found")
 
     article.status = "draft"
     db.commit()

@@ -7,8 +7,69 @@ from app.models.article import Article
 from app.schemas.music import MusicCreate, MusicOut
 from app.core.deps import require_admin
 
-
 router = APIRouter(prefix="/music", tags=["Music"])
+
+
+# =========================
+# 🔥 ERROR HANDLER
+# =========================
+def error(status: int, message: str, field: str | None = None):
+    raise HTTPException(
+        status_code=status,
+        detail={
+            "message": message,
+            "field": field
+        }
+    )
+
+
+# =========================
+# 🧼 CLEANER
+# =========================
+def clean(v: str | None) -> str:
+    return v.strip() if isinstance(v, str) else ""
+
+
+# =========================
+# 🧪 VALIDATION
+# =========================
+def validate_title(title: str):
+    title = clean(title)
+
+    if not title:
+        error(400, "Title is required", "title")
+
+    if len(title) < 2:
+        error(400, "Title too short", "title")
+
+    if len(title) > 200:
+        error(400, "Title too long", "title")
+
+    return title
+
+
+def validate_url(url: str):
+    url = clean(url)
+
+    if not url:
+        error(400, "YouTube URL is required", "youtube_url")
+
+    if "http" not in url:
+        error(400, "Invalid YouTube URL", "youtube_url")
+
+    return url
+
+
+def validate_position(pos):
+    try:
+        pos = int(pos)
+    except:
+        error(400, "Position must be a number", "position")
+
+    if pos < 0:
+        error(400, "Position cannot be negative", "position")
+
+    return pos
 
 
 # =========================
@@ -39,16 +100,20 @@ def add_music(
     article = db.query(Article).filter(Article.id == article_id).first()
 
     if not article:
-        raise HTTPException(status_code=404, detail="Article not found")
+        error(404, "Article not found")
 
     if not article.is_album:
-        raise HTTPException(status_code=400, detail="Article is not album")
+        error(400, "This article is not an album")
+
+    title = validate_title(data.title)
+    youtube_url = validate_url(data.youtube_url)
+    position = validate_position(data.position)
 
     music = Music(
         article_id=article_id,
-        title=data.title,
-        youtube_url=data.youtube_url,
-        position=data.position
+        title=title,
+        youtube_url=youtube_url,
+        position=position
     )
 
     db.add(music)
@@ -71,16 +136,16 @@ def delete_music(
     music = db.query(Music).filter(Music.id == music_id).first()
 
     if not music:
-        raise HTTPException(status_code=404, detail="Not found")
+        error(404, "Music not found")
 
     db.delete(music)
     db.commit()
 
-    return {"message": "deleted"}
+    return {"message": "deleted", "id": music_id}
 
 
 # =========================
-# ✏️ UPDATE MUSIC (OPTIONAL)
+# ✏️ UPDATE MUSIC
 # =========================
 @router.put("/{music_id}", response_model=MusicOut)
 def update_music(
@@ -93,11 +158,11 @@ def update_music(
     music = db.query(Music).filter(Music.id == music_id).first()
 
     if not music:
-        raise HTTPException(status_code=404, detail="Not found")
+        error(404, "Music not found")
 
-    music.title = data.title
-    music.youtube_url = data.youtube_url
-    music.position = data.position
+    music.title = validate_title(data.title)
+    music.youtube_url = validate_url(data.youtube_url)
+    music.position = validate_position(data.position)
 
     db.commit()
     db.refresh(music)

@@ -1,5 +1,6 @@
 from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.orm import Session
+from sqlalchemy import func
 
 from app.core.database import get_db
 from app.core.deps import get_current_user
@@ -13,20 +14,58 @@ router = APIRouter(prefix="/cultures", tags=["Music Cultures"])
 
 
 # =========================
-# SAFE HELPERS
+# 🔥 ERROR HANDLER
 # =========================
-def clean(v: str):
-    if v is None:
-        return ""
-    return v.strip()
+def error(status: int, message: str, field: str | None = None):
+    raise HTTPException(
+        status_code=status,
+        detail={
+            "message": message,
+            "field": field
+        }
+    )
 
 
+# =========================
+# 🧼 CLEANER
+# =========================
+def clean(v: str | None) -> str:
+    return v.strip() if isinstance(v, str) else ""
+
+
+# =========================
+# 👮 ROLE
+# =========================
 def get_role(user):
     return getattr(getattr(user, "role", None), "name", None)
 
 
+def require_roles(user, allowed: list[str]):
+    role = get_role(user)
+    if role not in allowed:
+        error(403, "Forbidden")
+
+
 # =========================
-# GET ALL CULTURES
+# 🧪 VALIDATION
+# =========================
+def validate_name(name: str):
+    name = clean(name)
+
+    if not name:
+        error(400, "Culture name is required", "name")
+
+    if len(name) < 2:
+        error(400, "Culture name too short", "name")
+
+    if len(name) > 150:
+        error(400, "Culture name too long", "name")
+
+    return name
+
+
+# =========================
+# 🌍 GET ALL CULTURES
 # =========================
 @router.get("/")
 def get_cultures(db: Session = Depends(get_db)):
@@ -47,7 +86,7 @@ def get_cultures(db: Session = Depends(get_db)):
 
 
 # =========================
-# GET BY ID
+# 📄 GET BY ID
 # =========================
 @router.get("/{culture_id}")
 def get_culture(culture_id: int, db: Session = Depends(get_db)):
@@ -55,7 +94,7 @@ def get_culture(culture_id: int, db: Session = Depends(get_db)):
     c = db.query(MusicCulture).filter(MusicCulture.id == culture_id).first()
 
     if not c:
-        raise HTTPException(status_code=404, detail="Culture not found")
+        error(404, "Culture not found")
 
     return {
         "id": c.id,
@@ -68,7 +107,7 @@ def get_culture(culture_id: int, db: Session = Depends(get_db)):
 
 
 # =========================
-# CREATE CULTURE
+# ➕ CREATE CULTURE
 # =========================
 @router.post("/")
 def create_culture(
@@ -77,29 +116,23 @@ def create_culture(
     user=Depends(get_current_user)
 ):
 
-    role = get_role(user)
+    require_roles(user, ["admin", "author"])
 
-    if role not in ["admin", "author"]:
-        raise HTTPException(status_code=403, detail="Forbidden")
+    name = validate_name(data.name)
 
-    name = clean(data.name)
-
-    # 🔥 VALIDATION
-    if not name:
-        raise HTTPException(status_code=400, detail="Culture name required")
-
-    if len(name) < 2:
-        raise HTTPException(status_code=400, detail="Culture name too short")
-
+    # country check
     country = db.query(Country).filter(Country.id == data.country_id).first()
 
     if not country:
-        raise HTTPException(status_code=404, detail="Country not found")
+        error(404, "Country not found", "country_id")
 
-    # 🔥 duplicate check
-    exists = db.query(MusicCulture).filter(MusicCulture.title == name).first()
+    # duplicate check (case-insensitive)
+    exists = db.query(MusicCulture).filter(
+        func.lower(MusicCulture.title) == name.lower()
+    ).first()
+
     if exists:
-        raise HTTPException(status_code=400, detail="Culture already exists")
+        error(400, "Culture already exists", "name")
 
     culture = MusicCulture(
         title=name,
@@ -118,7 +151,7 @@ def create_culture(
 
 
 # =========================
-# UPDATE CULTURE
+# ✏️ UPDATE CULTURE
 # =========================
 @router.put("/{culture_id}")
 def update_culture(
@@ -128,21 +161,18 @@ def update_culture(
     user=Depends(get_current_user)
 ):
 
-    role = get_role(user)
-
-    if role not in ["admin", "author"]:
-        raise HTTPException(status_code=403, detail="Forbidden")
+    require_roles(user, ["admin", "author"])
 
     c = db.query(MusicCulture).filter(MusicCulture.id == culture_id).first()
 
     if not c:
-        raise HTTPException(status_code=404, detail="Culture not found")
+        error(404, "Culture not found")
 
     update_data = data.model_dump(exclude_unset=True)
 
-    # 🔥 clean name if exists
     if "name" in update_data:
-        update_data["title"] = clean(update_data.pop("name"))
+        c.title = validate_name(update_data["name"])
+        update_data.pop("name")
 
     for key, value in update_data.items():
         setattr(c, key, value)
@@ -161,7 +191,7 @@ def update_culture(
 
 
 # =========================
-# DELETE CULTURE
+# ❌ DELETE CULTURE
 # =========================
 @router.delete("/{culture_id}")
 def delete_culture(
@@ -170,20 +200,17 @@ def delete_culture(
     user=Depends(get_current_user)
 ):
 
-    role = get_role(user)
-
-    if role != "admin":
-        raise HTTPException(status_code=403, detail="Forbidden")
+    require_roles(user, ["admin"])
 
     c = db.query(MusicCulture).filter(MusicCulture.id == culture_id).first()
 
     if not c:
-        raise HTTPException(status_code=404, detail="Culture not found")
+        error(404, "Culture not found")
 
     db.delete(c)
     db.commit()
 
     return {
-        "message": "Culture deleted",
+        "message": "deleted",
         "id": culture_id
     }

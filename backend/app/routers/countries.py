@@ -1,5 +1,6 @@
 from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.orm import Session
+from sqlalchemy import func
 
 from app.core.database import get_db
 from app.core.deps import get_current_user
@@ -10,16 +11,54 @@ router = APIRouter(prefix="/countries", tags=["Countries"])
 
 
 # =========================
-# SAFE HELPERS
+# 🔥 ERROR HANDLER
 # =========================
-def clean(v: str):
-    if v is None:
-        return ""
-    return v.strip()
+def error(status: int, message: str, field: str | None = None):
+    raise HTTPException(
+        status_code=status,
+        detail={
+            "message": message,
+            "field": field
+        }
+    )
 
 
 # =========================
-# GET ALL COUNTRIES
+# 🧼 CLEANER
+# =========================
+def clean(v: str | None) -> str:
+    return v.strip() if isinstance(v, str) else ""
+
+
+# =========================
+# 🧪 VALIDATION
+# =========================
+def validate_country_name(name: str):
+    name = clean(name)
+
+    if not name:
+        error(400, "Country name is required", "name")
+
+    if len(name) < 2:
+        error(400, "Country name too short", "name")
+
+    if len(name) > 100:
+        error(400, "Country name too long", "name")
+
+    return name
+
+
+# =========================
+# 👮 ADMIN CHECK
+# =========================
+def require_admin(user):
+    role_name = getattr(getattr(user, "role", None), "name", None)
+    if role_name != "admin":
+        error(403, "Admin access required")
+
+
+# =========================
+# 🌍 GET ALL COUNTRIES
 # =========================
 @router.get("/")
 def get_countries(db: Session = Depends(get_db)):
@@ -36,7 +75,7 @@ def get_countries(db: Session = Depends(get_db)):
 
 
 # =========================
-# GET BY ID
+# 📄 GET BY ID
 # =========================
 @router.get("/{country_id}")
 def get_country(country_id: int, db: Session = Depends(get_db)):
@@ -44,7 +83,7 @@ def get_country(country_id: int, db: Session = Depends(get_db)):
     country = db.query(Country).filter(Country.id == country_id).first()
 
     if not country:
-        raise HTTPException(status_code=404, detail="Country not found")
+        error(404, "Country not found")
 
     return {
         "id": country.id,
@@ -53,7 +92,7 @@ def get_country(country_id: int, db: Session = Depends(get_db)):
 
 
 # =========================
-# CREATE (ADMIN ONLY)
+# ➕ CREATE COUNTRY (ADMIN)
 # =========================
 @router.post("/", response_model=CountryResponse)
 def create_country(
@@ -62,24 +101,17 @@ def create_country(
     user=Depends(get_current_user)
 ):
 
-    role_name = getattr(getattr(user, "role", None), "name", None)
+    require_admin(user)
 
-    if role_name != "admin":
-        raise HTTPException(status_code=403, detail="Only admin can create country")
+    name = validate_country_name(data.name)
 
-    name = clean(data.name)
+    # 🔥 duplicate check (case-insensitive)
+    exists = db.query(Country).filter(
+        func.lower(Country.name) == name.lower()
+    ).first()
 
-    # 🔥 VALIDATION
-    if not name:
-        raise HTTPException(status_code=400, detail="Country name required")
-
-    if len(name) < 2:
-        raise HTTPException(status_code=400, detail="Country name too short")
-
-    # 🔥 duplicate check
-    exists = db.query(Country).filter(Country.name == name).first()
     if exists:
-        raise HTTPException(status_code=400, detail="Country already exists")
+        error(400, "Country already exists", "name")
 
     country = Country(name=name)
 
@@ -91,7 +123,7 @@ def create_country(
 
 
 # =========================
-# DELETE (ADMIN ONLY)
+# ❌ DELETE COUNTRY (ADMIN)
 # =========================
 @router.delete("/{country_id}")
 def delete_country(
@@ -100,20 +132,17 @@ def delete_country(
     user=Depends(get_current_user)
 ):
 
-    role_name = getattr(getattr(user, "role", None), "name", None)
-
-    if role_name != "admin":
-        raise HTTPException(status_code=403, detail="Forbidden")
+    require_admin(user)
 
     country = db.query(Country).filter(Country.id == country_id).first()
 
     if not country:
-        raise HTTPException(status_code=404, detail="Country not found")
+        error(404, "Country not found")
 
     db.delete(country)
     db.commit()
 
     return {
-        "message": "Country deleted",
+        "message": "deleted",
         "id": country_id
     }

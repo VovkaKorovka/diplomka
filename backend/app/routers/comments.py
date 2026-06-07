@@ -11,16 +11,45 @@ router = APIRouter(prefix="/comments", tags=["Comments"])
 
 
 # =========================
-# SAFE HELPERS
+# 🔥 ERROR HANDLER
 # =========================
-def clean_text(v: str):
-    if v is None:
-        return ""
-    return v.strip()
+def error(status: int, message: str, field: str | None = None):
+    raise HTTPException(
+        status_code=status,
+        detail={
+            "message": message,
+            "field": field
+        }
+    )
 
 
 # =========================
-# GET comments for article
+# 🧼 CLEANER
+# =========================
+def clean(v: str | None) -> str:
+    return v.strip() if isinstance(v, str) else ""
+
+
+# =========================
+# 🧪 VALIDATION
+# =========================
+def validate_comment(content: str):
+    content = clean(content)
+
+    if not content:
+        error(400, "Comment cannot be empty", "content")
+
+    if len(content) < 2:
+        error(400, "Comment too short (min 2 chars)", "content")
+
+    if len(content) > 2000:
+        error(400, "Comment too long (max 2000 chars)", "content")
+
+    return content
+
+
+# =========================
+# 📄 GET COMMENTS
 # =========================
 @router.get("/{article_id}")
 def get_comments(article_id: int, db: Session = Depends(get_db)):
@@ -28,7 +57,7 @@ def get_comments(article_id: int, db: Session = Depends(get_db)):
     article = db.query(Article).filter(Article.id == article_id).first()
 
     if not article:
-        raise HTTPException(status_code=404, detail="Article not found")
+        error(404, "Article not found")
 
     comments = (
         db.query(Comment)
@@ -49,7 +78,7 @@ def get_comments(article_id: int, db: Session = Depends(get_db)):
 
 
 # =========================
-# CREATE comment
+# ➕ CREATE COMMENT
 # =========================
 @router.post("/")
 def create_comment(
@@ -58,21 +87,14 @@ def create_comment(
     user=Depends(get_current_user)
 ):
 
-    content = clean_text(comment.content)
-
-    # 🔥 VALIDATION
-    if not content:
-        raise HTTPException(status_code=400, detail="Comment cannot be empty")
-
-    if len(content) < 2:
-        raise HTTPException(status_code=400, detail="Comment too short")
+    content = validate_comment(comment.content)
 
     article = db.query(Article).filter(
         Article.id == comment.article_id
     ).first()
 
     if not article:
-        raise HTTPException(status_code=404, detail="Article not found")
+        error(404, "Article not found")
 
     new_comment = Comment(
         content=content,
@@ -93,7 +115,7 @@ def create_comment(
 
 
 # =========================
-# DELETE comment
+# ❌ DELETE COMMENT
 # =========================
 @router.delete("/{comment_id}")
 def delete_comment(
@@ -105,12 +127,12 @@ def delete_comment(
     comment = db.query(Comment).filter(Comment.id == comment_id).first()
 
     if not comment:
-        raise HTTPException(status_code=404, detail="Comment not found")
+        error(404, "Comment not found")
 
     user_role = getattr(getattr(user, "role", None), "name", None)
 
     if user_role != "admin" and comment.user_id != user.id:
-        raise HTTPException(status_code=403, detail="No permission")
+        error(403, "You don't have permission to delete this comment")
 
     db.delete(comment)
     db.commit()
