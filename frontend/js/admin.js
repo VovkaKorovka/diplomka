@@ -33,19 +33,34 @@ async function api(url, options = {}) {
     });
 
     if (res.status === 401) {
-      alert("Session expired");
+      showError("Session expired");
       logout();
       return null;
     }
 
     if (res.status === 403) {
-      alert("No permission");
+      showError("No permission");
       return null;
     }
 
-    return res;
+    let data = null;
+
+    try {
+      data = await res.json();
+    } catch (e) {
+      data = null;
+    }
+
+    if (!res.ok) {
+      showError(extractError(data));
+      return null;
+    }
+
+    return data;
+
   } catch (err) {
-    console.error("API ERROR:", err);
+    console.error(err);
+    showError("Server error");
     return null;
   }
 }
@@ -745,6 +760,45 @@ function minLen(v, len) {
 }
 
 function showError(msg) {
-  alert(msg);
-  return false;
+  const box = document.getElementById("errorBox");
+  if (!box) return alert(msg);
+
+  const div = document.createElement("div");
+  div.className = "error-toast";
+
+  div.innerText = String(msg);
+
+  box.appendChild(div);
+
+  setTimeout(() => div.remove(), 4000);
+}
+
+function showSuccess(msg) {
+  const box = document.getElementById("errorBox");
+  if (!box) return alert(msg);
+
+  const div = document.createElement("div");
+  div.className = "success-toast";
+
+  div.innerText = String(msg);
+
+  box.appendChild(div);
+
+  setTimeout(() => div.remove(), 3000);
+}
+
+function extractError(data) {
+  if (!data) return "Request failed";
+
+  if (typeof data === "string") return data;
+
+  if (typeof data.detail === "string") return data.detail;
+
+  if (data.detail?.message) return data.detail.message;
+
+  if (data.detail?.msg) return data.detail.msg;
+
+  if (data.message) return data.message;
+
+  return JSON.stringify(data);
 }
