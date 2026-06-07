@@ -1,5 +1,6 @@
 from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.orm import Session
+from sqlalchemy import func
 
 from app.core.database import get_db
 from app.models.user import User
@@ -18,12 +19,10 @@ router = APIRouter(prefix="/auth", tags=["Auth"])
 
 
 # =========================
-# SAFE HELPERS
+# HELPERS
 # =========================
 def clean_str(value: str):
-    if value is None:
-        return ""
-    return value.strip()
+    return value.strip() if value else ""
 
 
 # =========================
@@ -33,24 +32,44 @@ def clean_str(value: str):
 def register(user: UserCreate, db: Session = Depends(get_db)):
 
     username = clean_str(user.username)
-    email = clean_str(user.email)
+    email = clean_str(user.email).lower()
     password = clean_str(user.password)
 
-    # 🔥 VALIDATION
-    if not username or len(username) < 3:
+    # -------------------------
+    # VALIDATION
+    # -------------------------
+    if len(username) < 3:
         raise HTTPException(status_code=400, detail="Username too short")
 
-    if not email or "@" not in email:
-        raise HTTPException(status_code=400, detail="Invalid email")
-
-    if not password or len(password) < 6:
+    if len(password) < 6:
         raise HTTPException(status_code=400, detail="Password too short")
 
-    existing_user = db.query(User).filter(User.email == email).first()
+    if "@" not in email:
+        raise HTTPException(status_code=400, detail="Invalid email")
 
-    if existing_user:
+    # -------------------------
+    # CHECK USERNAME EXISTS
+    # -------------------------
+    existing_username = db.query(User).filter(
+        func.lower(User.username) == username.lower()
+    ).first()
+
+    if existing_username:
+        raise HTTPException(status_code=400, detail="Username already exists")
+
+    # -------------------------
+    # CHECK EMAIL EXISTS
+    # -------------------------
+    existing_email = db.query(User).filter(
+        func.lower(User.email) == email
+    ).first()
+
+    if existing_email:
         raise HTTPException(status_code=400, detail="Email already exists")
 
+    # -------------------------
+    # ROLE CHECK
+    # -------------------------
     role_user = db.query(Role).filter(Role.name == "user").first()
 
     if not role_user:
@@ -59,6 +78,9 @@ def register(user: UserCreate, db: Session = Depends(get_db)):
             detail="Default role 'user' not found in DB"
         )
 
+    # -------------------------
+    # CREATE USER
+    # -------------------------
     new_user = User(
         username=username,
         email=email,
@@ -94,14 +116,18 @@ def register(user: UserCreate, db: Session = Depends(get_db)):
 @router.post("/login")
 def login(data: LoginSchema, db: Session = Depends(get_db)):
 
-    email = clean_str(data.email)
+    email = clean_str(data.email).lower()
     password = clean_str(data.password)
 
-    # 🔥 VALIDATION
     if not email or not password:
-        raise HTTPException(status_code=400, detail="Email and password required")
+        raise HTTPException(
+            status_code=400,
+            detail="Email and password required"
+        )
 
-    user = db.query(User).filter(User.email == email).first()
+    user = db.query(User).filter(
+        func.lower(User.email) == email
+    ).first()
 
     if not user:
         raise HTTPException(status_code=400, detail="Invalid credentials")
